@@ -260,7 +260,7 @@ details.alts > summary .chev,details.filters > summary .chev{margin-left:auto}
 .stars button svg{width:28px;height:28px}
 .stars button.on{color:var(--star)}
 .divider{height:1px;background:var(--border);margin:0}
-.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 32px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--primary);color:var(--primary-fg);padding:12px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--shadow-lg);white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 32px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100% - 32px);white-space:normal!important;text-align:center;background:var(--primary);color:var(--primary-fg);padding:12px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:95;box-shadow:var(--shadow-lg);white-space:nowrap}
 
 /* ---------- map ---------- */
 .mapbox{position:relative;border-radius:20px;overflow:hidden;background:var(--muted);height:420px;min-height:300px;touch-action:none;box-shadow:inset 0 0 0 1px var(--border)}
@@ -305,11 +305,41 @@ details.alts > summary .chev,details.filters > summary .chev{margin-left:auto}
 .btn.danger.fill:hover{opacity:.9;background:var(--danger)}
 .clear-row{display:flex;justify-content:flex-start}
 .clear-row[hidden]{display:none}
-.cscrim{position:fixed;inset:0;background:var(--overlay);z-index:70}
-.confirm{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:71;width:min(400px,calc(100% - 40px));background:var(--card);border-radius:24px;padding:24px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px}
+.cscrim{position:fixed;inset:0;background:var(--overlay);z-index:90}
+.confirm{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:91;width:min(400px,calc(100% - 40px));background:var(--card);border-radius:24px;padding:24px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px}
 .confirm h3{font-size:20px;line-height:1.25;font-weight:600}
 .confirm p{font-size:15px;color:var(--muted-fg)}
 .confirm .acts2{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+/* roteiro header link + onboarding */
+.rtop{display:flex;justify-content:flex-end;margin-bottom:-16px}
+.lnk{appearance:none;border:0;background:none;padding:8px 0;font-size:13px;font-weight:600;color:var(--foreground);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--input);cursor:pointer}
+.ib.on-plan{color:var(--foreground)}
+.ob{position:fixed;inset:0;z-index:80;background:var(--background);overflow:auto}
+.ob-in{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:16px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.ob-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.prog{display:flex;gap:4px;flex:1;max-width:200px}
+.prog i{height:4px;flex:1;border-radius:2px;background:var(--muted-2)}
+.prog i.on{background:var(--foreground)}
+.ob-body{flex:1;display:flex;flex-direction:column;gap:24px;padding-block:32px 24px}
+.ob-body h2{font-size:26px;line-height:1.2;font-weight:700}
+.obq{display:flex;flex-direction:column;gap:12px}
+.obq > .label{font-size:15px}
+.obchips{display:flex;flex-wrap:wrap;gap:8px}
+.obchip{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;border-radius:999px;border:1px solid var(--input);background:var(--card);font-size:14px;font-weight:600;cursor:pointer;text-align:left}
+.obchip[aria-pressed="true"]{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.obchip .n{width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-size:12px;font-weight:700}
+.obopts{display:flex;flex-direction:column;gap:8px}
+.obopt{appearance:none;display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:16px;border-radius:16px;border:1px solid var(--input);background:var(--card);cursor:pointer}
+.obopt b{font-weight:600}.obopt span{font-size:13px;color:var(--muted-fg)}
+.obopt[aria-pressed="true"]{border-color:var(--foreground);box-shadow:inset 0 0 0 1px var(--foreground)}
+.obrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.obsw{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border-radius:16px;border:1px solid var(--input);cursor:pointer}
+.obsw input{width:20px;height:20px;accent-color:var(--foreground)}
+.ob-foot{display:flex;gap:12px;position:sticky;bottom:0;background:var(--background);padding-top:12px}
+.ob-foot .pri{flex:1}
+.ob-foot .btn{height:48px}
+.ob .days{display:flex;gap:8px}
+.oberr{font-size:13px;color:var(--again)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -345,6 +375,7 @@ details.alts > summary .chev,details.filters > summary .chev{margin-left:auto}
 <div id="toast-root"></div>
 
 <script id="data" type="application/json">%%DATA%%</script>
+<script>%%PLANNER%%</script>
 <script>
 (function(){
 "use strict";
@@ -371,7 +402,8 @@ if (/[?&]sair\b/.test(location.search)) { try { localStorage.removeItem('fe26.us
 let USER = LS.get('fe26.user', null), KEY = LS.get('fe26.key', null);
 const apiGet = a => fetch(`${API}?a=${a}&u=${encodeURIComponent(USER)}&key=${encodeURIComponent(KEY)}`, {cache:'no-store'}).then(r => r.json());
 const apiPost = o => fetch(API, {method:'POST', body: JSON.stringify(Object.assign({u: USER, key: KEY}, o))}).then(r => r.json());
-const INT = [{bit:1, w:3, cls:'i1', label:'Gastronomia'}, {bit:2, w:2, cls:'i2', label:'Marketplace'}, {bit:4, w:1, cls:'i4', label:'Design'}];
+const INT0 = [{bit:1, w:3, cls:'i1', label:'Gastronomia'}, {bit:2, w:2, cls:'i2', label:'Marketplace'}, {bit:4, w:1, cls:'i4', label:'Design'}];
+let INT = INT0;
 const iscore = m => m & 1 ? 3 : m & 2 ? 2 : m & 4 ? 1 : 0;
 const ifirst = m => m & 1 ? 1 : m & 2 ? 2 : m & 4 ? 4 : 0;
 const ichips = m => INT.filter(x => m & x.bit).map(x => `<span class="itag ${x.cls}"><i></i>${x.label}</span>`).join('');
@@ -400,14 +432,110 @@ const spOf = it => it.kind === 'talk' ? STAGES[it.st].sp : it.sp;
 const dist = (a, b) => (a < 0 || b < 0 || !CEN[a] || !CEN[b]) ? 1e9 : Math.hypot(CEN[a][0] - CEN[b][0], CEN[a][1] - CEN[b][1]);
 const distLabel = d => d >= 1e9 ? '' : d < 90 ? 'ao lado' : d < 300 ? 'perto' : d < 900 ? 'caminhada curta' : 'longe';
 const PLANNED = new Map();
+ACTS.forEach(a => { a.im0 = a.im; }); EXS.forEach(e => { e.im0 = e.im; });
+const TH = Object.fromEntries(window.FE26Planner.THEMES.map(t => [t.id, t]));
+/* roteiro da pessoa: {days:{19:{tema, items, alts}}, routes:{key:[ex]}, mine:{19:[ex]}, answers?}
+   salvo no aparelho e na aba "Roteiros" da planilha; o Leandro começa com o roteiro feito à mão */
 let PLAN = null, HASINT = false;
+function planKey(){ return 'fe26.plan.' + fold(USER); }
 function setPerson(){
-  // só o Leandro tem roteiro por enquanto; Maria e Romana entram quando os briefings chegarem
-  PLAN = fold(USER) === 'leandro' ? D.plan : (D.plans && D.plans[fold(USER)]) || null;
-  HASINT = !!PLAN;
+  const saved = LS.get(planKey(), null);
+  PLAN = saved && saved.plan ? saved.plan : fold(USER) === 'leandro' ? {days: D.plan, routes: D.routes, mine: {}, base: true} : null;
+  applyPlan();
+}
+function applyPlan(){
   PLANNED.clear();
-  if (PLAN) DAYS.forEach(d => PLAN[d].items.forEach(it => { if (it[0] === 'talk') PLANNED.set(it[1], it[2]); }));
-  if (!HASINT) { ACTS.forEach(a => { a.im = 0; }); EXS.forEach(e => { e.im = 0; }); }
+  if (PLAN) DAYS.forEach(d => { const p = PLAN.days[d]; if (p) p.items.forEach(it => { if (it[0] === 'talk') PLANNED.set(it[1], it[2]); }); });
+  const ans = PLAN && PLAN.answers;
+  if (ans && ans.themes && ans.themes.length) {
+    INT = ans.themes.map((id, i) => ({bit: 1 << i, w: 3 - i, cls: 'i' + (1 << i), label: TH[id].short.charAt(0).toUpperCase() + TH[id].short.slice(1)}));
+    ACTS.forEach(a => { a.im = 0; ans.themes.forEach((id, i) => { const t = TH[id]; if (t.re.test(a.title) || t.stages.includes(STAGES[a.st].name)) a.im |= 1 << i; }); });
+    EXS.forEach(e => { e.im = 0; ans.themes.forEach((id, i) => { const t = TH[id]; if (t.segs.includes(e.seg) || t.re.test(e.name + ' ' + e.bio)) e.im |= 1 << i; }); });
+  } else if (PLAN && fold(USER) === 'leandro') { INT = INT0; ACTS.forEach(a => { a.im = a.im0; }); EXS.forEach(e => { e.im = e.im0; }); }
+  else { INT = []; ACTS.forEach(a => { a.im = 0; }); EXS.forEach(e => { e.im = 0; }); }
+  HASINT = INT.length > 0;
+}
+const planSync = {
+  unsupported: false, busy: false,
+  save(){
+    PLAN.base = false;
+    const rec = {plan: PLAN, ts: Date.now(), pend: true};
+    LS.set(planKey(), rec); applyPlan(); this.push();
+  },
+  push(){
+    const rec = LS.get(planKey(), null);
+    if (!rec || !rec.pend || this.unsupported || this.busy || !API.startsWith('http')) return;
+    this.busy = true;
+    apiPost({a: 'setplan', plan: JSON.stringify(rec.plan), ts: rec.ts}).then(res => {
+      if (res && res.ok) { const cur = LS.get(planKey(), null); if (cur && cur.ts === rec.ts) { cur.pend = false; LS.set(planKey(), cur); } }
+      else if (res && res.erro === 'acao') this.unsupported = true;   // planilha ainda na versão 1 do script
+    }).catch(() => {}).then(() => { this.busy = false; });
+  },
+  load(){
+    if (!API.startsWith('http')) return;
+    apiGet('getplan').then(res => {
+      if (!res || !res.ok) { if (res && res.erro === 'acao') this.unsupported = true; return; }
+      const cur = LS.get(planKey(), null);
+      if (res.plan && res.ts > ((cur && cur.ts) || 0) && !(cur && cur.pend)) {
+        try { LS.set(planKey(), {plan: JSON.parse(res.plan), ts: res.ts, pend: false}); setPerson(); if (!sheetK) LIGHT[ui.tab](); } catch (e) {}
+      } else this.push();
+    }).catch(() => {});
+  }
+};
+// cópia própria antes de mexer (o roteiro do Leandro vem do arquivo de dados)
+function ownPlan(){
+  if (!PLAN) PLAN = {days: {}, routes: {}, mine: {}};
+  else if (PLAN.base) PLAN = JSON.parse(JSON.stringify({days: PLAN.days, routes: PLAN.routes, mine: PLAN.mine || {}}));
+  PLAN.mine = PLAN.mine || {}; PLAN.routes = PLAN.routes || {};
+  return PLAN;
+}
+const itemStart = it => it[0] === 'talk' ? ACT.get(it[1]).s : hm(it[1]);
+function inPlan(it){
+  if (!PLAN || !it) return false;
+  if (it.kind === 'talk') { const p = PLAN.days[it.day]; return !!p && (p.items.some(x => x[0] === 'talk' && x[1] === it.id) || p.alts.some(x => x[0] === it.id)); }
+  return Object.values(PLAN.routes || {}).some(l => l.includes(it.i)) || Object.values(PLAN.mine || {}).some(l => l.includes(it.i));
+}
+function addToPlan(it){
+  const P = ownPlan();
+  if (it.kind === 'talk') {
+    const d = it.day;
+    if (!P.days[d]) P.days[d] = {tema: 'Meu roteiro', lead: '', items: [], alts: []};
+    const p = P.days[d];
+    const clash = p.items.find(x => x[0] === 'talk' && ACT.get(x[1]).s < it.e && ACT.get(x[1]).e > it.s);
+    if (clash) {
+      const c = ACT.get(clash[1]);
+      p.alts.push([it.id, `Alternativa a “${c.title}” (${fmt(c.s)}–${fmt(c.e)}).`]);
+      planSync.save();
+      toast(`Adicionada como alternativa a “${c.title.length > 40 ? c.title.slice(0, 38) + '…' : c.title}”`, 4200);
+    } else {
+      p.items.push(['talk', it.id, 0]);
+      p.items.sort((x, y) => itemStart(x) - itemStart(y));
+      planSync.save();
+      toast('Adicionada ao roteiro de ' + DAYL[d].split(' ')[0].toLowerCase());
+    }
+  } else {
+    const d = DAYS.includes(ui.day) ? ui.day : DAYS[0];
+    (P.mine[d] = P.mine[d] || []).push(it.i);
+    planSync.save();
+    toast('Adicionado aos seus estandes de ' + DAYL[d].split(' ')[0].toLowerCase());
+  }
+}
+function removeFromPlan(it){
+  const P = ownPlan();
+  if (it.kind === 'talk') {
+    const p = P.days[it.day];
+    if (p) { p.items = p.items.filter(x => !(x[0] === 'talk' && x[1] === it.id)); p.alts = p.alts.filter(x => x[0] !== it.id); }
+  } else {
+    Object.keys(P.routes).forEach(k => { P.routes[k] = P.routes[k].filter(i => i !== it.i); });
+    Object.keys(P.mine).forEach(k => { P.mine[k] = P.mine[k].filter(i => i !== it.i); });
+    DAYS.forEach(d => { const p = P.days[d]; if (p) p.items = p.items.filter(x => !(x[0] === 'blk' && x[3] === 'estandes' && x[5] && P.routes[x[5]] && !P.routes[x[5]].length)); });
+  }
+  planSync.save();
+  toast('Removido do roteiro');
+}
+function afterPlanChange(k){
+  if (sheetK && sheetK === k) openSheet(k);
+  LIGHT[ui.tab]();
 }
 
 /* ---------- check-in store: device first, then the person's tab in the Google Sheet ---------- */
@@ -505,9 +633,9 @@ const srch = {q:'', type:'', day:'', per:'', int:'', st:'', stage:'', seg:'', pT
 const mine = {f:'', p:1};
 const mapst = {from:-1, to:-1, fromLabel:'', toLabel:'', sel:-1};
 
-function toast(msg){
+function toast(msg, ms){
   const r = $('#toast-root'); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`;
-  clearTimeout(toast.t); toast.t = setTimeout(() => { r.innerHTML = ''; }, 1800);
+  clearTimeout(toast.t); toast.t = setTimeout(() => { r.innerHTML = ''; }, ms || 1800);
 }
 
 /* ---------- cards ---------- */
@@ -531,6 +659,8 @@ const SV = (d, w) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const I_LOC = SV('<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.2"/>');
 const I_USER = SV('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>');
 const I_TAG = SV('<path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="9" r="1.3"/>');
+const I_ADD = SV('<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M12 12.5v5M9.5 15h5"/>');
+const planBtn = it => inPlan(it) ? `<button class="ib on-plan" data-act="unplan" aria-label="Tirar do roteiro" title="Tirar do roteiro">${I_TRASH}</button>` : `<button class="ib" data-act="plan" aria-label="Adicionar ao roteiro" title="Adicionar ao roteiro">${I_ADD}</button>`;
 const I_TRASH = SV('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/>');
 const I_INFO = SV('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>');
 const I_FMT = SV('<rect x="3.5" y="5" width="17" height="12" rx="2"/><path d="M8 20h8"/>');
@@ -561,6 +691,7 @@ function talkCard(a, o){
       <button class="chk tg-w" data-act="watch" aria-pressed="${r.w ? 'true' : 'false'}">${I_CHECK}<span>${r.w ? 'Assistida' : 'Assisti'}</span></button>
       ${r.s ? `<span class="stars-mini" aria-label="${r.s} estrelas">${'★'.repeat(r.s)}</span>` : ''}
       <span class="grow"></span>
+      ${planBtn(a)}
       <button class="ib" data-act="open" aria-label="Avaliar e comentar" title="Avaliar">${I_STAR}</button>
       <button class="ib" data-act="near" aria-label="O que tem por perto" title="Por perto">${I_NEAR}</button>
       <button class="ib" data-act="map" aria-label="Ver no mapa" title="Mapa">${I_PIN}</button>
@@ -578,6 +709,7 @@ function standCard(e, o){
       <button class="chk tg-r" data-act="again" aria-pressed="${r.r ? 'true' : 'false'}" aria-label="Visitar de novo" title="Visitar de novo">${I_AGAIN}<span class="opt-l">De novo</span></button>
       ${r.s ? `<span class="stars-mini" aria-label="${r.s} estrelas">${'★'.repeat(r.s)}</span>` : ''}
       <span class="grow"></span>
+      ${planBtn(e)}
       <button class="ib" data-act="open" aria-label="Avaliar e comentar" title="Avaliar">${I_STAR}</button>
       ${e.sp >= 0 ? `<button class="ib" data-act="map" aria-label="Ver no mapa" title="Mapa">${I_PIN}</button>` : ''}
     </div></article>`;
@@ -587,7 +719,8 @@ function miniStand(e){
   return `<div class="mini" data-k="${e.k}"><div class="nm"><b data-act="open">${esc(e.name)}</b><span>Estande ${esc(e.stand)}</span></div>
     <button class="ib tg-v" data-act="visit" aria-pressed="${r && r.v ? 'true' : 'false'}" title="Visitado" aria-label="Marcar como visitado">${I_CHECK}</button>
     <button class="ib tg-r" data-act="again" aria-pressed="${r && r.r ? 'true' : 'false'}" title="Visitar de novo" aria-label="Marcar para visitar de novo">${I_AGAIN}</button>
-    ${e.sp >= 0 ? `<button class="ib" data-act="map" title="Ver no mapa" aria-label="Ver no mapa">${I_PIN}</button>` : ''}</div>`;
+    ${e.sp >= 0 ? `<button class="ib" data-act="map" title="Ver no mapa" aria-label="Ver no mapa">${I_PIN}</button>` : ''}
+    <button class="ib" data-act="unplan" title="Tirar do roteiro" aria-label="Tirar do roteiro">${I_TRASH}</button></div>`;
 }
 function moreBtn(shown, total, key){
   if (shown >= total) return '';
@@ -595,6 +728,12 @@ function moreBtn(shown, total, key){
 }
 
 /* ---------- Roteiro ---------- */
+function mineGroup(list){
+  if (!list.length) return '';
+  const done = list.filter(x => { const r = store.get(x.k); return r && r.v; }).length;
+  return `<details class="blk est group" open data-open="${ui.day}.mine"><summary><span class="tile">${I_GRID}</span><div class="bt"><b>Meus estandes</b><small>Adicionados por você</small></div><span class="count">${done}/${list.length}</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="list">${list.map(miniStand).join('')}</div></details>`;
+}
 const I_SUN = SV('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>');
 const I_MOON = SV('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>');
 const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
@@ -602,21 +741,28 @@ const themeBtn = () => `<button class="ib theme" data-act="theme" aria-label="${
 const BLK_ICON = {chegada: I_WALK, almoco: I_FORK, pausa: I_COFFEE, estandes: I_GRID};
 const span = (s, e) => `${s.replace(':', 'h')}–${e.replace(':', 'h')}`;
 function renderRoteiro(){
-  if (!PLAN) {
-    $('#p-roteiro').innerHTML = `<div class="dayrow"><span></span>${themeBtn()}</div>
-      <div class="mission"><p class="kicker">Olá, ${esc(USER)}</p><h2 class="h2">Seu roteiro está sendo montado</h2><p class="small muted" style="margin-top:8px">Enquanto isso, use Buscar e Por perto para achar palestras e estandes. Tudo o que você marcar e comentar fica salvo nos seus check-ins.</p></div>`;
+  const hasDays = PLAN && DAYS.some(d => PLAN.days[d]);
+  const top = `<div class="rtop"><button class="lnk" data-act="onboard">${hasDays ? 'Alterar roteiro' : 'Criar roteiro'}</button></div>
+    <div class="dayrow"><div class="days" role="group" aria-label="Dia">${DAYS.map(d => `<button class="day" data-day="${d}" aria-pressed="${d === ui.day}"><small>${DAYN[d]}</small><b>${d}</b></button>`).join('')}</div>${themeBtn()}</div>`;
+  if (!hasDays) {
+    $('#p-roteiro').innerHTML = top + `<div class="mission"><p class="kicker">Olá, ${esc(USER)}</p><h2 class="h2">Monte seu roteiro em 1 minuto</h2><p class="small muted" style="margin-top:8px">Quatro perguntas rápidas sobre seus interesses, dias e ritmo. O app escolhe as palestras, o almoço e os estandes para você.</p><div style="margin-top:16px"><button class="btn pri" data-act="onboard">Criar roteiro</button></div></div>`;
     return;
   }
-  const p = PLAN[ui.day];
-  let h = `<div class="dayrow"><div class="days" role="group" aria-label="Dia">${DAYS.map(d => `<button class="day" data-day="${d}" aria-pressed="${d === ui.day}"><small>${DAYN[d]}</small><b>${d}</b></button>`).join('')}</div>${themeBtn()}</div>
-    <div class="mission"><p class="kicker">${ui.day === fairDay ? 'Missão de hoje' : 'Missão do dia'}, ${DAYL[ui.day].split(' ')[1]}</p><h2 class="h2">${esc(p.tema)}</h2></div><div class="stack" style="gap:0">`;
+  const p = PLAN.days[ui.day];
+  const mineL = ((PLAN.mine || {})[ui.day] || []).map(i => EXS[i]);
+  if (!p && !mineL.length) {
+    $('#p-roteiro').innerHTML = top + `<div class="mission"><p class="kicker">${DAYL[ui.day]}</p><h2 class="h2">Sem roteiro para este dia</h2><p class="small muted" style="margin-top:8px">Para incluir algo, encontre em Buscar ou Por perto e toque no ícone de calendário com +.</p></div>`;
+    return;
+  }
+  let h = top + `<div class="mission"><p class="kicker">${ui.day === fairDay ? 'Missão de hoje' : 'Missão do dia'}, ${DAYL[ui.day].split(' ')[1]}</p><h2 class="h2">${esc(p ? p.tema : 'Meu roteiro')}</h2></div><div class="stack" style="gap:0">`;
+  if (!p) { h += mineGroup(mineL) + '</div>'; $('#p-roteiro').innerHTML = h; return; }
   p.items.forEach((it, idx) => {
     if (it[0] === 'talk') { const a = ACT.get(it[1]); h += talkCard(a, {peso: it[2], note: it[3]}); return; }
     const [, s, e, kind, label, route] = it;
     let [t1, t2] = label.split(/:\s*/);
     if (t2) t2 = t2.charAt(0).toUpperCase() + t2.slice(1);
     if (kind === 'estandes') {
-      const list = D.routes[route].map(i => EXS[i]);
+      const list = ((PLAN.routes || {})[route] || []).map(i => EXS[i]);
       const done = list.filter(x => { const r = store.get(x.k); return r && r.v; }).length;
       h += `<details class="blk est group" ${LS.get('fe26.open.' + ui.day + '.' + idx, false) ? 'open' : ''} data-open="${ui.day}.${idx}"><summary><span class="tile">${BLK_ICON.estandes}</span><div class="bt"><span class="time">${span(s, e)}</span><b>${esc(t1)}</b>${t2 ? `<small>${esc(t2)}</small>` : ''}</div><span class="count">${done}/${list.length}</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
         <div class="list">${list.map(miniStand).join('')}</div>
@@ -625,7 +771,7 @@ function renderRoteiro(){
       h += `<div class="blk${kind === 'almoco' || kind === 'pausa' ? ' hl' : ''}"><span class="tile">${BLK_ICON[kind] || I_COFFEE}</span><div class="bt"><span class="time">${span(s, e)}</span><span>${esc(t1)}</span>${t2 ? `<small>${esc(t2)}</small>` : ''}</div></div>`;
     }
   });
-  h += '</div>';
+  h += mineGroup(mineL) + '</div>';
   if (p.alts.length) {
     h += `<details class="alts"><summary><span>Alternativas do dia</span><span class="count">${p.alts.length}</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary><div class="stack" style="gap:0">${p.alts.map(([id, note]) => talkCard(ACT.get(id), {note})).join('')}</div></details>`;
   }
@@ -720,8 +866,8 @@ function combo(host, opts){
 
 /* ---------- Por perto ---------- */
 function planLocAt(day, t){
-  if (!PLAN) return -1;
-  const items = PLAN[day].items.filter(i => i[0] === 'talk').map(i => ACT.get(i[1]));
+  if (!PLAN || !PLAN.days[day]) return -1;
+  const items = PLAN.days[day].items.filter(i => i[0] === 'talk').map(i => ACT.get(i[1]));
   let cur = items.find(a => a.s <= t && a.e > t) || items.filter(a => a.s <= t).pop() || items[0];
   return cur ? STAGES[cur.st].sp : -1;
 }
@@ -786,7 +932,7 @@ function renderBuscar(){
   P.innerHTML = `<h2 class="h2">Buscar</h2>
     <div class="search">${I_SEARCH}<input class="input" id="s-q" type="search" placeholder="Empresa, palestra ou nº do estande" value="${esc(srch.q)}" aria-label="Buscar"></div>
     <div class="chips" role="group" aria-label="Filtros">
-      ${HASINT ? chip('int', 'Interesse', opt('', 'Interesse', srch.int) + opt('7', 'Meus interesses', srch.int) + opt('1', 'Gastronomia', srch.int) + opt('2', 'Marketplace, música e arte', srch.int) + opt('4', 'Design', srch.int)) : ''}
+      ${HASINT ? chip('int', 'Interesse', opt('', 'Interesse', srch.int) + opt('7', 'Meus interesses', srch.int) + INT.map(x => opt(String(x.bit), x.label, srch.int)).join('')) : ''}
       ${chip('day', 'Dia', opt('', 'Dia', srch.day) + DAYS.map(d => opt(d, DAYL[d], srch.day)).join(''))}
       ${chip('per', 'Período', opt('', 'Período', srch.per) + opt('m', 'Manhã', srch.per) + opt('t', 'Tarde', srch.per) + opt('n', 'Noite', srch.per))}
       ${chip('st', 'Situação', opt('', 'Situação', srch.st) + opt('todo', 'Ainda não vi', srch.st) + opt('done', 'Assisti / visitei', srch.st) + opt('again', 'Visitar de novo', srch.st) + opt('rated', 'Avaliados', srch.st) + (PLAN ? opt('plan', 'Do meu roteiro', srch.st) : ''))}
@@ -869,7 +1015,7 @@ function openSheet(k){
       <div class="field"><span class="label">Sua avaliação</span><div class="stars" id="stars">${stars}</div></div>
       <div class="field"><label class="label" for="note">Comentário</label><textarea class="input" id="note" maxlength="1000" placeholder="O que valeu, contatos, preços, ideias…">${esc(r.n || '')}</textarea>
         <div class="note-row"><span class="count" id="note-c">${(r.n || '').length}/1000</span><button class="btn sm pri" type="button" id="note-save">Salvar comentário</button></div><span class="note-st" id="note-st" role="status"></span></div>
-      <div class="row">${spOf(it) >= 0 ? `<button class="btn" data-act="map">${I_PIN}Ver no mapa</button>` : ''}${it.kind === 'talk' ? `<button class="btn" data-act="near">${I_NEAR}Por perto</button>` : ''}</div>
+      <div class="row">${inPlan(it) ? `<button class="btn" data-act="unplan">${I_TRASH}Tirar do roteiro</button>` : `<button class="btn" data-act="plan">${I_ADD}Adicionar ao roteiro</button>`}${spOf(it) >= 0 ? `<button class="btn" data-act="map">${I_PIN}Ver no mapa</button>` : ''}${it.kind === 'talk' ? `<button class="btn" data-act="near">${I_NEAR}Por perto</button>` : ''}</div>
       <div class="clear-row" id="clear-row" ${store.empty(r) ? 'hidden' : ''}><button class="btn sm danger" type="button" data-act="askclear">${I_TRASH}Limpar</button></div>
     </div></div>`;
   const ta = $('#note'); let t;
@@ -887,24 +1033,33 @@ function openSheet(k){
   ta.addEventListener('blur', () => { clearTimeout(t); const cur = (store.get(k) || {}).n || ''; if (cur !== ta.value) store.put(k, {n: ta.value.slice(0, 1000)}); });
   document.addEventListener('keydown', escClose);
 }
-function escClose(e){ if (e.key !== 'Escape') return; if ($('.confirm')) closeConfirm(); else closeSheet(); }
+function escClose(e){ if (e.key !== 'Escape') return; if ($('.confirm')) closeConfirmAll(); else closeSheet(); }
+document.addEventListener('keydown', e => { if (e.key !== 'Escape' || sheetK) return; if ($('.confirm')) closeConfirmAll(); else if ($('#ob')) closeOnboard(); });
 /* confirmation before clearing an item's check-in, rating and comment */
 function clearWhat(r){
   const parts = [];
   if (r.w || r.v || r.r) parts.push('o check-in'); if (r.s) parts.push('a avaliação'); if (r.n) parts.push('o comentário');
   return parts.length > 1 ? parts.slice(0, -1).join(', ') + ' e ' + parts[parts.length - 1] : parts[0] || 'os registros';
 }
-function askClear(k){
-  const r = store.get(k) || {}; const it = BYK.get(k);
+let confirmFn = null;
+function confirmDlg(title, text, okLabel, danger, fn){
+  closeConfirm(); confirmFn = fn;
   const box = document.createElement('div');
   box.innerHTML = `<div class="cscrim" data-act="cancelclear"></div><div class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="cf-t" aria-describedby="cf-d">
-    <h3 id="cf-t">Limpar ${it && it.kind === 'stand' ? 'este estande' : 'esta palestra'}?</h3>
-    <p id="cf-d">Tem certeza que deseja limpar ${clearWhat(r)}? Essa ação não poderá ser desfeita.</p>
-    <div class="acts2"><button class="btn" type="button" data-act="cancelclear">Cancelar</button><button class="btn danger fill" type="button" data-act="doclear" data-ck="${esc(k)}">Limpar</button></div></div>`;
+    <h3 id="cf-t">${esc(title)}</h3><p id="cf-d">${esc(text)}</p>
+    <div class="acts2"><button class="btn" type="button" data-act="cancelclear">Cancelar</button><button class="btn ${danger ? 'danger fill' : 'pri'}" type="button" data-act="doconfirm">${esc(okLabel)}</button></div></div>`;
   box.id = 'confirm-root'; document.body.appendChild(box);
   setTimeout(() => { const b = $('#confirm-root [data-act="cancelclear"].btn'); if (b) b.focus(); }, 30);
 }
+function askClear(k){
+  const r = store.get(k) || {}; const it = BYK.get(k);
+  confirmDlg(`Limpar ${it && it.kind === 'stand' ? 'este estande' : 'esta palestra'}?`, `Tem certeza que deseja limpar ${clearWhat(r)}? Essa ação não poderá ser desfeita.`, 'Limpar', true,
+    () => { store.put(k, {w:0, v:0, r:0, s:0, n:''}); if (sheetK === k) openSheet(k); toast('Registros limpos'); });
+  return;
+  setTimeout(() => { const b = $('#confirm-root [data-act="cancelclear"].btn'); if (b) b.focus(); }, 30);
+}
 function closeConfirm(){ const c = $('#confirm-root'); if (c) c.remove(); }
+function closeConfirmAll(){ closeConfirm(); confirmFn = null; }
 function closeSheet(){
   const ta = $('#note'); if (ta && sheetK) { const cur = (store.get(sheetK) || {}).n || ''; if (cur !== ta.value) store.put(sheetK, {n: ta.value.slice(0, 1000)}); }
   $('#sheet-root').innerHTML = ''; sheetK = null; document.removeEventListener('keydown', escClose);
@@ -1184,15 +1339,18 @@ document.addEventListener('click', e => {
     case 'open': if (k) openSheet(k); break;
     case 'close': closeSheet(); break;
     case 'askclear': if (sheetK) askClear(sheetK); break;
-    case 'cancelclear': closeConfirm(); break;
-    case 'doclear': { const ck = ab.dataset.ck; closeConfirm(); store.put(ck, {w:0, v:0, r:0, s:0, n:''}); if (sheetK === ck) openSheet(ck); toast('Registros limpos'); break; }
+    case 'cancelclear': closeConfirmAll(); break;
+    case 'doconfirm': { const fn = confirmFn; closeConfirmAll(); if (fn) fn(); break; }
+    case 'plan': if (it) { addToPlan(it); afterPlanChange(k); } break;
+    case 'unplan': if (it) { removeFromPlan(it); afterPlanChange(k); } break;
+    case 'onboard': openOnboard(); break;
     case 'watch': store.put(k, {w: r.w ? 0 : 1}); toast(r.w ? 'Desmarcada' : 'Marcada como assistida'); break;
     case 'visit': store.put(k, {v: r.v ? 0 : 1}); toast(r.v ? 'Desmarcado' : 'Marcado como visitado'); break;
     case 'again': store.put(k, {r: r.r ? 0 : 1}); toast(r.r ? 'Removido de "visitar de novo"' : 'Marcado para visitar de novo'); break;
     case 'near': if (it) { near.day = it.day; near.t = Math.floor(it.s / 30) * 30; near.sp = STAGES[it.st].sp; near.pT = near.pS = 1; closeSheet(); go('perto'); } break;
     case 'nownear': near.day = fairDay; near.t = Math.max(600, Math.min(1200, Math.floor(nowMin / 30) * 30)); renderPerto(); break;
     case 'map': if (it) { closeSheet(); showOnMap(spOf(it)); } break;
-    case 'routemap': { const ids = D.routes[ab.dataset.route].map(i => EXS[i].sp).filter(s => s >= 0); mapst.marks = ids; mapst.pts = null; go('mapa'); loadMap().then(() => { if (!svgEl) return; ids.forEach(i => { const el = $(`.poly[data-sp="${i}"]`, svgEl); if (el) el.classList.add('mark'); }); fitPts(ids.map(i => CEN[i])); }); break; }
+    case 'routemap': { const ids = PLAN.routes[ab.dataset.route].map(i => EXS[i].sp).filter(s => s >= 0); mapst.marks = ids; mapst.pts = null; go('mapa'); loadMap().then(() => { if (!svgEl) return; ids.forEach(i => { const el = $(`.poly[data-sp="${i}"]`, svgEl); if (el) el.classList.add('mark'); }); fitPts(ids.map(i => CEN[i])); }); break; }
     case 'route': doRoute(); break;
     case 'swap': { [mapst.from, mapst.to] = [mapst.to, mapst.from]; [mapst.fromLabel, mapst.toLabel] = [mapst.toLabel, mapst.fromLabel]; mapst.toCands = null; $('#m-fromi').value = mapst.fromLabel; $('#m-toi').value = mapst.toLabel; if (mapst.from >= 0 && mapst.to >= 0) doRoute(); else drawPins(); break; }
     case 'zin': attachZoom(1 / 1.4); break;
@@ -1208,12 +1366,91 @@ function attachZoom(f){ if (!svgEl) return; const b = svgEl.getBoundingClientRec
 document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details[data-open]')) LS.set('fe26.open.' + d.dataset.open, d.open); }, true);
 
 /* ---------- boot ---------- */
+/* ---------- onboarding: 4 perguntas → roteiro (FE26Planner) ---------- */
+const OB = {step: 0, ans: null};
+const OB_STEPS = 4;
+function obValid(){
+  const a = OB.ans;
+  if (OB.step === 0) return a.themes.length > 0;
+  if (OB.step === 1) return !!(a.stage && a.format);
+  if (OB.step === 2) return a.days.length > 0 && a.leave - a.arrive >= 180;
+  return !!a.pace;
+}
+function openOnboard(){
+  const prev = PLAN && PLAN.answers;
+  OB.ans = prev ? JSON.parse(JSON.stringify(prev)) : {themes: [], stage: '', format: '', days: DAYS.slice(), arrive: 600, leave: 1080, pace: '', stands: 50, walkLess: false};
+  OB.step = 0; renderOb();
+}
+function closeOnboard(){ const o = $('#ob'); if (o) o.remove(); }
+function renderOb(){
+  let o = $('#ob'); if (!o) { o = document.createElement('div'); o.id = 'ob'; o.className = 'ob'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-modal', 'true'); o.setAttribute('aria-label', 'Criar roteiro'); document.body.appendChild(o); }
+  const a = OB.ans;
+  const opt = (k, v, t, sub) => `<button class="obopt" type="button" data-obk="${k}" data-obv="${v}" aria-pressed="${a[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ''}</button>`;
+  const pill = (k, v, l) => `<button class="obchip" type="button" data-obk="${k}" data-obv="${v}" aria-pressed="${String(a[k]) === String(v)}">${l}</button>`;
+  let body = '';
+  if (OB.step === 0) {
+    body = `<h2>O que você quer aprender na feira?</h2><div class="obq"><span class="small muted">Escolha até 3, tocando na ordem de importância. Toque de novo para tirar.</span>
+      <div class="obchips">${window.FE26Planner.THEMES.map(t => { const i = a.themes.indexOf(t.id); return `<button class="obchip" type="button" data-obtheme="${t.id}" aria-pressed="${i >= 0}">${i >= 0 ? `<span class="n">${i + 1}</span>` : ''}${esc(t.label)}</button>`; }).join('')}</div></div>`;
+  } else if (OB.step === 1) {
+    body = `<h2>Em que momento você está?</h2>
+      <div class="obopts">${opt('stage', 'ideia', 'Ainda é uma ideia', 'Quero entender por onde começar')}${opt('stage', 'comecando', 'Comecei há pouco', 'Já vendo, mas tudo ainda é novo')}${opt('stage', 'crescer', 'Já tenho um negócio', 'Quero organizar e crescer')}</div>
+      <div class="obq"><span class="label">Como você prefere aprender?</span><div class="obchips">${pill('format', 'ouvir', 'Ouvindo palestras')}${pill('format', 'pratica', 'Vendo na prática')}${pill('format', 'ambos', 'Tanto faz')}</div></div>`;
+  } else if (OB.step === 2) {
+    const sel = (k, list) => `<select class="select input" id="ob-${k}" data-obsel="${k}">${list.map(m => `<option value="${m}" ${a[k] === m ? 'selected' : ''}>${fmt(m)}</option>`).join('')}</select>`;
+    body = `<h2>Quando você vai?</h2>
+      <div class="obq"><span class="label">Dias</span><div class="days">${DAYS.map(d => `<button class="day" type="button" data-obday="${d}" aria-pressed="${a.days.includes(d)}"><small>${DAYN[d]}</small><b>${d}</b></button>`).join('')}</div></div>
+      <div class="obrow"><div class="obq"><label class="label" for="ob-arrive">Chego por volta de</label>${sel('arrive', [600, 660, 720, 780, 840])}</div>
+      <div class="obq"><label class="label" for="ob-leave">Saio por volta de</label>${sel('leave', [960, 1020, 1080, 1140, 1200])}</div></div>
+      ${a.leave - a.arrive < 180 ? '<p class="oberr">Fique pelo menos 3 horas para o roteiro valer a pena.</p>' : ''}${!a.days.length ? '<p class="oberr">Escolha pelo menos um dia.</p>' : ''}`;
+  } else {
+    body = `<h2>Qual ritmo combina com você?</h2>
+      <div class="obopts">${opt('pace', 'leve', 'Leve', 'Até 3 palestras por dia, almoço sem pressa e pausa à tarde')}${opt('pace', 'equilibrado', 'Equilibrado', 'Até 5 palestras por dia, com pausa à tarde')}${opt('pace', 'intenso', 'Intenso', 'Até 7 palestras por dia, aproveitando cada horário')}</div>
+      <div class="obq"><span class="label">Tempo para visitar estandes por dia</span><div class="obchips">${pill('stands', 0, 'Nenhum')}${pill('stands', 50, 'Cerca de 50 min')}${pill('stands', 90, 'Cerca de 1h30')}</div></div>
+      <label class="obsw" for="ob-walk"><span><b style="font-weight:600">Prefiro caminhar menos</b><br><span class="small muted">Evita trocar de palco longe em sequência</span></span><input type="checkbox" id="ob-walk" ${a.walkLess ? 'checked' : ''}></label>`;
+  }
+  o.innerHTML = `<div class="ob-in"><div class="ob-top"><div class="prog">${Array.from({length: OB_STEPS}, (_, i) => `<i class="${i <= OB.step ? 'on' : ''}"></i>`).join('')}</div><span class="small muted">${OB.step + 1} de ${OB_STEPS}</span><button class="ib" type="button" data-obact="close" aria-label="Fechar">${SV('<path d="M6 6l12 12M18 6 6 18"/>', 2)}</button></div>
+    <div class="ob-body">${body}</div>
+    <div class="ob-foot">${OB.step ? '<button class="btn" type="button" data-obact="back">Voltar</button>' : ''}<button class="btn pri" type="button" data-obact="next" ${obValid() ? '' : 'disabled'}>${OB.step === OB_STEPS - 1 ? 'Criar meu roteiro' : 'Continuar'}</button></div></div>`;
+  o.scrollTop = 0;
+}
+function finishOnboard(){
+  const a = Object.assign({}, OB.ans, {days: OB.ans.days.slice().sort()});
+  const apply = () => {
+    const g = window.FE26Planner.makePlan(D, a);
+    PLAN = {answers: a, days: g.days, routes: g.routes, mine: {}};
+    planSync.save();
+    const first = DAYS.find(d => PLAN.days[d]);
+    ui.day = fairDay && PLAN.days[fairDay] ? fairDay : first; saveUi();
+    closeOnboard(); go('roteiro'); toast('Roteiro criado');
+  };
+  const hasDays = PLAN && DAYS.some(d => PLAN.days[d]);
+  if (hasDays) confirmDlg('Substituir seu roteiro?', 'O roteiro atual, incluindo o que você adicionou, será trocado pelo novo. Seus check-ins, avaliações e comentários continuam salvos.', 'Substituir', false, apply);
+  else apply();
+}
+document.addEventListener('click', e => {
+  const ob = e.target.closest('#ob'); if (!ob) return;
+  const b = e.target.closest('button'); if (!b) return;
+  const a = OB.ans;
+  if (b.dataset.obact === 'close') { closeOnboard(); return; }
+  if (b.dataset.obact === 'back') { OB.step--; renderOb(); return; }
+  if (b.dataset.obact === 'next') { if (!obValid()) return; if (OB.step < OB_STEPS - 1) { OB.step++; renderOb(); } else finishOnboard(); return; }
+  if (b.dataset.obtheme) { const id = b.dataset.obtheme, i = a.themes.indexOf(id); if (i >= 0) a.themes.splice(i, 1); else if (a.themes.length < 3) a.themes.push(id); renderOb(); return; }
+  if (b.dataset.obday) { const d = +b.dataset.obday, i = a.days.indexOf(d); if (i >= 0) a.days.splice(i, 1); else a.days.push(d); renderOb(); return; }
+  if (b.dataset.obk) { const k = b.dataset.obk; a[k] = k === 'stands' ? +b.dataset.obv : b.dataset.obv; renderOb(); return; }
+}, true);
+document.addEventListener('change', e => {
+  if (!OB.ans) return;
+  if (e.target.dataset && e.target.dataset.obsel) { OB.ans[e.target.dataset.obsel] = +e.target.value; renderOb(); }
+  if (e.target.id === 'ob-walk') OB.ans.walkLess = e.target.checked;
+});
+
 function start(){
   $('#gate').hidden = true;
   $('#who').textContent = '· ' + USER;
   setPerson(); store.init();
   go(ui.tab in RENDER ? ui.tab : 'roteiro');
-  store.connect();
+  store.connect(); planSync.load();
+  setInterval(() => planSync.push(), 30000); window.addEventListener('online', () => planSync.push());
   // warm the map files while the connection is good, without blocking the first screen
   const idle = window.requestIdleCallback || (f => setTimeout(f, 2500));
   idle(() => { loadMap().catch(() => {}); const im = new Image(); im.src = 'mapa.webp'; });
