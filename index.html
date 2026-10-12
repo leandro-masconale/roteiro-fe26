@@ -82,8 +82,7 @@ svg{flex:none}
 .sync i{width:7px;height:7px;border-radius:50%;background:var(--muted-fg)}
 .sync[data-s="ok"] i{background:var(--ok)}
 .sync[data-s="pend"] i{background:var(--again)}
-.sync span{display:none}
-@media (min-width:560px){.sync span{display:inline}}
+.sync[data-s="off"] i,.sync[data-s="err"] i{background:var(--to)}
 .wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:4px calc(var(--nav-h) + 48px + env(safe-area-inset-bottom,0px))}
 section.panel[hidden]{display:none}
 section.panel.stack{gap:0}
@@ -300,11 +299,21 @@ details.alts > summary .chev,details.filters > summary .chev{margin-left:auto}
 .stat{padding:16px;border-radius:var(--radius);background:var(--muted)}
 .stat b{font-size:28px;line-height:1;display:block;font-variant-numeric:tabular-nums;letter-spacing:0;font-weight:700}
 .stat span{font-size:13px;color:var(--muted-fg)}
+/* first-access gate: name + family code */
+.gate{position:fixed;inset:0;z-index:100;background:var(--background);overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.gate-in{width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px}
+.gate-in .logo{width:40px;height:40px;border-radius:12px;background:var(--accent)}
+.gate-in .h1{margin-top:8px}
+.gate-err{min-height:20px;font-size:14px;color:var(--to)}
+.gate-in .btn{width:100%;height:48px}
+.note-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.note-st{font-size:13px;color:var(--muted-fg)}
+.note-st.ok{color:var(--ok)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <header class="top"><div class="top-in">
-  <div class="brand"><i aria-hidden="true"></i>Roteiro FE26<span>· São Paulo Expo</span></div>
+  <div class="brand"><i aria-hidden="true"></i>Roteiro FE26<span id="who">· São Paulo Expo</span></div>
   <div class="sync" id="sync" data-s="local"><i></i><span>Carregando</span></div>
 </div></header>
 
@@ -323,6 +332,15 @@ details.alts > summary .chev,details.filters > summary .chev{margin-left:auto}
   <section class="panel stack" id="p-mapa" hidden></section>
   <section class="panel stack" id="p-meus" hidden></section>
 </main>
+<div class="gate" id="gate" hidden><form class="gate-in" id="gate-f" autocomplete="off" novalidate>
+  <span class="logo" aria-hidden="true"></span>
+  <div><h1 class="h1">Roteiro FE26</h1><p class="muted" style="margin-top:4px">Feira do Empreendedor · 19 a 22 de outubro</p></div>
+  <div class="field"><label class="label" for="g-n">Seu primeiro nome</label><input class="input" id="g-n" autocapitalize="words" autocomplete="off" spellcheck="false"></div>
+  <div class="field"><label class="label" for="g-c">Código da família</label><input class="input" id="g-c" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"></div>
+  <p class="gate-err" id="g-err" role="alert"></p>
+  <button class="btn pri" type="submit" id="g-go">Entrar</button>
+  <p class="small muted">Este aparelho fica registrado no seu nome. Tudo o que você marcar e comentar vai para a sua parte da planilha.</p>
+</form></div>
 <div id="sheet-root"></div>
 <div id="toast-root"></div>
 
@@ -346,6 +364,13 @@ const LS = {
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
 const PAGE = 20;
+/* ---------- planilha (Google Apps Script) ---------- */
+const API = 'https://script.google.com/macros/s/AKfycbyDHrLX_CYe5zXsMOEIuOdp1bTRc6r2Z3AuWFfDEDg_iJjCibVQsf0tlBr2B5vViBD-/exec';
+const USERS = ['Leandro', 'Maria', 'Romana'];
+if (/[?&]sair\b/.test(location.search)) { try { localStorage.removeItem('fe26.user'); localStorage.removeItem('fe26.key'); } catch (e) {} history.replaceState(null, '', location.pathname); }
+let USER = LS.get('fe26.user', null), KEY = LS.get('fe26.key', null);
+const apiGet = a => fetch(`${API}?a=${a}&u=${encodeURIComponent(USER)}&key=${encodeURIComponent(KEY)}`, {cache:'no-store'}).then(r => r.json());
+const apiPost = o => fetch(API, {method:'POST', body: JSON.stringify(Object.assign({u: USER, key: KEY}, o))}).then(r => r.json());
 const INT = [{bit:1, w:3, cls:'i1', label:'Gastronomia'}, {bit:2, w:2, cls:'i2', label:'Marketplace'}, {bit:4, w:1, cls:'i4', label:'Design'}];
 const iscore = m => m & 1 ? 3 : m & 2 ? 2 : m & 4 ? 1 : 0;
 const ifirst = m => m & 1 ? 1 : m & 2 ? 2 : m & 4 ? 4 : 0;
@@ -375,64 +400,96 @@ const spOf = it => it.kind === 'talk' ? STAGES[it.st].sp : it.sp;
 const dist = (a, b) => (a < 0 || b < 0 || !CEN[a] || !CEN[b]) ? 1e9 : Math.hypot(CEN[a][0] - CEN[b][0], CEN[a][1] - CEN[b][1]);
 const distLabel = d => d >= 1e9 ? '' : d < 90 ? 'ao lado' : d < 300 ? 'perto' : d < 900 ? 'caminhada curta' : 'longe';
 const PLANNED = new Map();
-DAYS.forEach(d => D.plan[d].items.forEach(it => { if (it[0] === 'talk') PLANNED.set(it[1], it[2]); }));
+let PLAN = null, HASINT = false;
+function setPerson(){
+  // só o Leandro tem roteiro por enquanto; Maria e Romana entram quando os briefings chegarem
+  PLAN = fold(USER) === 'leandro' ? D.plan : (D.plans && D.plans[fold(USER)]) || null;
+  HASINT = !!PLAN;
+  PLANNED.clear();
+  if (PLAN) DAYS.forEach(d => PLAN[d].items.forEach(it => { if (it[0] === 'talk') PLANNED.set(it[1], it[2]); }));
+  if (!HASINT) { ACTS.forEach(a => { a.im = 0; }); EXS.forEach(e => { e.im = 0; }); }
+}
 
-/* ---------- check-in store: device first, synced to the artifact database ---------- */
+/* ---------- check-in store: device first, then the person's tab in the Google Sheet ---------- */
 const store = {
-  recs: LS.get('fe26.recs.v1', {}),
-  pend: new Set(LS.get('fe26.pend.v1', [])),
-  coll: null, state: 'local', listeners: [],
+  recs: {}, pend: new Set(), state: 'wait', listeners: [], timer: null, busy: null,
+  K(x){ return 'fe26.' + x + '.' + fold(USER); },
+  init(){
+    this.recs = LS.get(this.K('recs'), null);
+    this.pend = new Set(LS.get(this.K('pend'), []));
+    if (!this.recs) {
+      this.recs = {};
+      const old = fold(USER) === 'leandro' ? LS.get('fe26.recs.v1', null) : null;  // check-ins feitos antes do login
+      if (old) Object.keys(old).forEach(k => { this.recs[k] = old[k]; this.pend.add(k); });
+      this.save();
+    }
+  },
   get(k){ return this.recs[k] || null; },
   empty(r){ return !r.w && !r.v && !r.r && !r.s && !r.n; },
   put(k, patch){
     const it = BYK.get(k); const cur = Object.assign({k, kind: it ? it.kind : '', w:0, v:0, r:0, s:0, n:''}, this.recs[k] || {});
     Object.assign(cur, patch, {ts: Date.now()});
-    if (this.empty(cur)) delete this.recs[k]; else this.recs[k] = cur;
-    this.pend.add(k); this.save(); this.flush(); this.emit(k);
+    this.recs[k] = cur;
+    this.pend.add(k); this.save(); this.emit(k); this.soon();
   },
-  save(){ LS.set('fe26.recs.v1', this.recs); LS.set('fe26.pend.v1', Array.from(this.pend)); },
+  save(){ LS.set(this.K('recs'), this.recs); LS.set(this.K('pend'), Array.from(this.pend)); },
   emit(k){ this.listeners.forEach(f => f(k)); },
-  async flush(){
-    if (!this.coll || this.flushing) { this.status(); return; }
-    this.flushing = true;
-    for (const k of Array.from(this.pend)) {
-      const r = this.recs[k];
-      try {
-        if (r) await this.coll.doc(k).set(r); else await this.coll.doc(k).delete();
-        this.pend.delete(k);
-      } catch (e) { break; }
-    }
-    this.flushing = false; this.save(); this.status();
+  soon(){ clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), 1200); this.status(); },
+  row(k){
+    const r = this.recs[k] || {k, ts: Date.now()}; const it = BYK.get(k); const talk = !it || it.kind === 'talk';
+    const base = {k, ts: r.ts || Date.now()};
+    if (this.empty(r)) return Object.assign(base, {del: 1});
+    return Object.assign(base, {
+      tipo: talk ? 'Palestra' : 'Estande',
+      dia: it && talk ? DAYL[it.day] : '',
+      hora: it && talk ? fmt(it.s) + '–' + fmt(it.e) : '',
+      titulo: it ? (talk ? it.title : it.name) : k,
+      local: it ? (talk ? STAGES[it.st].name : 'Estande ' + it.stand) : '',
+      f: talk ? r.w : r.v, r: r.r, s: r.s, n: r.n});
+  },
+  flush(){
+    if (this.busy) return this.busy.then(() => this.pend.size ? this.flush() : null);
+    if (!this.pend.size || !API.startsWith('http')) { this.status(); return Promise.resolve(); }
+    const keys = Array.from(this.pend), sent = {};
+    keys.forEach(k => { sent[k] = (this.recs[k] || {}).ts; });
+    this.busy = apiPost({a: 'save', recs: keys.map(k => this.row(k))}).then(res => {
+      if (res && res.ok) { keys.forEach(k => { if ((this.recs[k] || {}).ts === sent[k]) this.pend.delete(k); }); this.state = 'ok'; }
+      else this.state = 'err';
+    }).catch(() => { this.state = 'off'; }).then(() => { this.busy = null; this.save(); this.status(); });
+    return this.busy;
+  },
+  load(){
+    if (!API.startsWith('http')) { this.status(); return Promise.resolve(); }
+    return apiGet('load').then(res => {
+      if (!res || !res.ok) { this.state = 'err'; return; }
+      let changed = false; const seen = new Set();
+      (res.recs || []).forEach(x => {
+        const it = BYK.get(x.k); if (!it) return; seen.add(x.k);
+        const talk = it.kind === 'talk', l = this.recs[x.k];
+        if (this.pend.has(x.k) && l && (l.ts || 0) >= x.ts) return;
+        if (!l || x.ts > (l.ts || 0)) { this.recs[x.k] = {k: x.k, kind: it.kind, w: talk ? x.f : 0, v: talk ? 0 : x.f, r: x.r, s: x.s, n: x.n, ts: x.ts}; changed = true; }
+      });
+      // o que existe só neste aparelho também sobe para a planilha
+      Object.keys(this.recs).forEach(k => { if (!seen.has(k) && !this.empty(this.recs[k])) this.pend.add(k); });
+      this.state = 'ok'; this.save(); if (changed) this.emit(null);
+    }).catch(() => { this.state = 'off'; }).then(() => { this.status(); return this.flush(); });
   },
   status(){
-    const el = $('#sync'); const n = this.pend.size;
-    if (!this.coll) { el.dataset.s = n ? 'pend' : 'local'; el.lastChild.textContent = 'Salvo neste aparelho'; return; }
-    el.dataset.s = n ? 'pend' : 'ok';
-    el.lastChild.textContent = n ? (n === 1 ? '1 registro para enviar' : n + ' registros para enviar') : 'Sincronizado';
+    const el = $('#sync'); if (!el) return; const n = this.pend.size;
+    const txt = n ? (this.state === 'off' ? 'Sem internet · ' : '') + (n === 1 ? '1 item para enviar' : n + ' itens para enviar')
+      : this.state === 'ok' ? 'Salvo na planilha' : this.state === 'err' ? 'Erro na planilha' : this.state === 'off' ? 'Sem internet' : 'Conectando…';
+    el.dataset.s = n ? (this.state === 'off' || this.state === 'err' ? 'off' : 'pend') : this.state === 'ok' ? 'ok' : this.state === 'wait' ? 'local' : 'off';
+    el.lastChild.textContent = txt;
   },
-  async connect(){
-    this.status();
-    try {
-      if (!window.claude || !window.claude.use) return;
-      const db = await window.claude.use('db');
-      if (!db) return;
-      this.coll = db.collection('checkins');
-      this.coll.onSnapshot(snap => {
-        let changed = false;
-        snap.docs.forEach(doc => {
-          const r = doc.data(); if (!r || !r.k) return;
-          const l = this.recs[doc.id];
-          if (this.pend.has(doc.id) && l && l.ts > (r.ts || 0)) return;
-          if (!l || (r.ts || 0) > (l.ts || 0)) { this.recs[doc.id] = Object.assign({}, r); changed = true; }
-        });
-        snap.docChanges().forEach(ch => { if (ch.type === 'removed' && !this.pend.has(ch.doc.id)) { delete this.recs[ch.doc.id]; changed = true; } });
-        if (changed) { this.save(); this.emit(null); }
-        this.status();
-      }, () => { this.status(); });
-      this.flush();
-      setInterval(() => { if (this.pend.size) this.flush(); }, 20000);
-      window.addEventListener('online', () => this.flush());
-    } catch (e) { this.status(); }
+  connect(){
+    this.status(); this.load();
+    setInterval(() => { if (this.pend.size) this.flush(); }, 20000);
+    window.addEventListener('online', () => this.flush());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && this.pend.size && navigator.sendBeacon && API.startsWith('http')) {
+        try { navigator.sendBeacon(API, JSON.stringify({u: USER, key: KEY, a: 'save', recs: Array.from(this.pend).map(k => this.row(k))})); } catch (e) {}
+      } else if (document.visibilityState === 'visible' && this.pend.size) this.flush();
+    });
   }
 };
 
@@ -544,7 +601,12 @@ const themeBtn = () => `<button class="ib theme" data-act="theme" aria-label="${
 const BLK_ICON = {chegada: I_WALK, almoco: I_FORK, pausa: I_COFFEE, estandes: I_GRID};
 const span = (s, e) => `${s.replace(':', 'h')}–${e.replace(':', 'h')}`;
 function renderRoteiro(){
-  const p = D.plan[ui.day];
+  if (!PLAN) {
+    $('#p-roteiro').innerHTML = `<div class="dayrow"><span></span>${themeBtn()}</div>
+      <div class="mission"><p class="kicker">Olá, ${esc(USER)}</p><h2 class="h2">Seu roteiro está sendo montado</h2><p class="small muted" style="margin-top:8px">Enquanto isso, use Buscar e Por perto para achar palestras e estandes. Tudo o que você marcar e comentar fica salvo nos seus check-ins.</p></div>`;
+    return;
+  }
+  const p = PLAN[ui.day];
   let h = `<div class="dayrow"><div class="days" role="group" aria-label="Dia">${DAYS.map(d => `<button class="day" data-day="${d}" aria-pressed="${d === ui.day}"><small>${DAYN[d]}</small><b>${d}</b></button>`).join('')}</div>${themeBtn()}</div>
     <div class="mission"><p class="kicker">${ui.day === fairDay ? 'Missão de hoje' : 'Missão do dia'}, ${DAYL[ui.day].split(' ')[1]}</p><h2 class="h2">${esc(p.tema)}</h2></div><div class="stack" style="gap:0">`;
   p.items.forEach((it, idx) => {
@@ -657,7 +719,8 @@ function combo(host, opts){
 
 /* ---------- Por perto ---------- */
 function planLocAt(day, t){
-  const items = D.plan[day].items.filter(i => i[0] === 'talk').map(i => ACT.get(i[1]));
+  if (!PLAN) return -1;
+  const items = PLAN[day].items.filter(i => i[0] === 'talk').map(i => ACT.get(i[1]));
   let cur = items.find(a => a.s <= t && a.e > t) || items.filter(a => a.s <= t).pop() || items[0];
   return cur ? STAGES[cur.st].sp : -1;
 }
@@ -670,7 +733,7 @@ function renderPerto(){
     <details class="ctx" ${near.open ? 'open' : ''}><summary>${I_LOC}<span class="ctx-l" id="n-sum">${esc(spLabel(near.sp) || 'Onde você está?')}</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary><div id="n-loc"></div></details>
     <div class="days" role="group" aria-label="Dia">${DAYS.map(d => `<button class="day" data-nday="${d}" aria-pressed="${d === near.day}"><small>${DAYN[d]}</small><b>${d}</b></button>`).join('')}</div>
     <div class="slots" role="group" aria-label="Horário" id="n-slots">${fairDay ? '<button class="slot" data-act="nownear">Agora</button>' : ''}${times.map(m => `<button class="slot" data-nt="${m}" aria-pressed="${m === near.t}">${fmt(m)}</button>`).join('')}</div>
-    <div class="utabs" role="group" aria-label="Filtro"><button data-onlyint="0" aria-pressed="${!near.onlyInt}">Tudo</button><button data-onlyint="1" aria-pressed="${near.onlyInt}">Do meu interesse</button></div>
+    ${HASINT ? `<div class="utabs" role="group" aria-label="Filtro"><button data-onlyint="0" aria-pressed="${!near.onlyInt}">Tudo</button><button data-onlyint="1" aria-pressed="${near.onlyInt}">Do meu interesse</button></div>` : ''}
     <div id="n-res"></div>`;
   combo($('#n-loc'), {id:'n-where', label:'Onde estou', ph:'Estande, empresa ou palco (ex.: 420, Kaema)', value: spLabel(near.sp), nearest:false,
     onPick: o => { near.sp = o.sps[0]; ui.here = near.sp; saveUi(); near.pT = near.pS = 1; $('details.ctx').open = false; near.open = false; renderNearRes(); }});
@@ -722,10 +785,10 @@ function renderBuscar(){
   P.innerHTML = `<h2 class="h2">Buscar</h2>
     <div class="search">${I_SEARCH}<input class="input" id="s-q" type="search" placeholder="Empresa, palestra ou nº do estande" value="${esc(srch.q)}" aria-label="Buscar"></div>
     <div class="chips" role="group" aria-label="Filtros">
-      ${chip('int', 'Interesse', opt('', 'Interesse', srch.int) + opt('7', 'Meus interesses', srch.int) + opt('1', 'Gastronomia', srch.int) + opt('2', 'Marketplace, música e arte', srch.int) + opt('4', 'Design', srch.int))}
+      ${HASINT ? chip('int', 'Interesse', opt('', 'Interesse', srch.int) + opt('7', 'Meus interesses', srch.int) + opt('1', 'Gastronomia', srch.int) + opt('2', 'Marketplace, música e arte', srch.int) + opt('4', 'Design', srch.int)) : ''}
       ${chip('day', 'Dia', opt('', 'Dia', srch.day) + DAYS.map(d => opt(d, DAYL[d], srch.day)).join(''))}
       ${chip('per', 'Período', opt('', 'Período', srch.per) + opt('m', 'Manhã', srch.per) + opt('t', 'Tarde', srch.per) + opt('n', 'Noite', srch.per))}
-      ${chip('st', 'Situação', opt('', 'Situação', srch.st) + opt('todo', 'Ainda não vi', srch.st) + opt('done', 'Assisti / visitei', srch.st) + opt('again', 'Visitar de novo', srch.st) + opt('rated', 'Avaliados', srch.st) + opt('plan', 'Do meu roteiro', srch.st))}
+      ${chip('st', 'Situação', opt('', 'Situação', srch.st) + opt('todo', 'Ainda não vi', srch.st) + opt('done', 'Assisti / visitei', srch.st) + opt('again', 'Visitar de novo', srch.st) + opt('rated', 'Avaliados', srch.st) + (PLAN ? opt('plan', 'Do meu roteiro', srch.st) : ''))}
       ${chip('stage', 'Palco', opt('', 'Palco', srch.stage) + STAGES.map((st, i) => [st.name, i]).sort((x, y) => x[0].localeCompare(y[0])).map(([n, i]) => opt(i, n, srch.stage)).join(''))}
       ${chip('seg', 'Segmento', opt('', 'Segmento', srch.seg) + D.segs.map(x => opt(x, x, srch.seg)).join(''))}
       ${nf ? '<button class="chip" data-act="clearsearch">Limpar</button>' : ''}
@@ -734,7 +797,7 @@ function renderBuscar(){
     <div id="s-res"></div>`;
   let t;
   $('#s-q').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => { srch.q = e.target.value; srch.pT = srch.pS = 1; renderSearchRes(); }, 180); });
-  ['int', 'st', 'day', 'per', 'stage', 'seg'].forEach(k => { $('#s-' + k).onchange = e => { srch[k] = e.target.value; srch.pT = srch.pS = 1; const sc = $('.chips').scrollLeft; renderBuscar(); $('.chips').scrollLeft = sc; }; });
+  ['int', 'st', 'day', 'per', 'stage', 'seg'].forEach(k => { const sel = $('#s-' + k); if (sel) sel.onchange = e => { srch[k] = e.target.value; srch.pT = srch.pS = 1; const sc = $('.chips').scrollLeft; renderBuscar(); $('.chips').scrollLeft = sc; }; });
   renderSearchRes();
 }
 function renderSearchRes(){
@@ -761,7 +824,7 @@ function renderSearchRes(){
 
 /* ---------- Check-ins ---------- */
 function renderMeus(){
-  const all = Object.values(store.recs).filter(r => BYK.has(r.k));
+  const all = Object.values(store.recs).filter(r => BYK.has(r.k) && !store.empty(r));
   const c = {w: all.filter(r => r.w).length, v: all.filter(r => r.v).length, r: all.filter(r => r.r).length, s: all.filter(r => r.s || r.n).length};
   let list = all;
   if (mine.f === 'talk') list = all.filter(r => r.kind === 'talk');
@@ -803,11 +866,22 @@ function openSheet(k){
   $('#sheet-root').innerHTML = `<div class="scrim" data-act="close"></div>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Detalhes" data-k="${k}"><div class="sheet-top"><button class="ib" data-act="close" aria-label="Fechar">${SV('<path d="M6 6l12 12M18 6 6 18"/>', 2)}</button></div><div class="stack">${body}<div class="divider"></div>
       <div class="field"><span class="label">Sua avaliação</span><div class="row"><div class="stars" id="stars">${stars}</div>${r.s ? '<button class="btn sm ghost" data-star="0">Limpar</button>' : ''}</div></div>
-      <div class="field"><label class="label" for="note">Comentário</label><textarea class="input" id="note" maxlength="1000" placeholder="O que valeu, contatos, preços, ideias…">${esc(r.n || '')}</textarea><span class="count" id="note-c">${(r.n || '').length}/1000</span></div>
+      <div class="field"><label class="label" for="note">Comentário</label><textarea class="input" id="note" maxlength="1000" placeholder="O que valeu, contatos, preços, ideias…">${esc(r.n || '')}</textarea>
+        <div class="note-row"><span class="count" id="note-c">${(r.n || '').length}/1000</span><button class="btn sm pri" type="button" id="note-save">Salvar comentário</button></div><span class="note-st" id="note-st" role="status"></span></div>
       <div class="row">${spOf(it) >= 0 ? `<button class="btn" data-act="map">${I_PIN}Ver no mapa</button>` : ''}${it.kind === 'talk' ? `<button class="btn" data-act="near">${I_NEAR}Por perto</button>` : ''}</div>
     </div></div>`;
   const ta = $('#note'); let t;
-  ta.addEventListener('input', () => { $('#note-c').textContent = ta.value.length + '/1000'; clearTimeout(t); t = setTimeout(() => store.put(k, {n: ta.value.slice(0, 1000)}), 600); });
+  const st = $('#note-st');
+  ta.addEventListener('input', () => { $('#note-c').textContent = ta.value.length + '/1000'; st.textContent = ''; st.className = 'note-st'; clearTimeout(t); t = setTimeout(() => store.put(k, {n: ta.value.slice(0, 1000)}), 600); });
+  $('#note-save').addEventListener('click', async () => {
+    clearTimeout(t);
+    if (((store.get(k) || {}).n || '') !== ta.value) store.put(k, {n: ta.value.slice(0, 1000)});
+    st.className = 'note-st'; st.textContent = 'Salvando…';
+    await store.flush();
+    if (sheetK !== k) return;
+    if (store.pend.has(k)) st.textContent = 'Salvo no aparelho. Vai para a planilha quando a internet voltar.';
+    else { st.className = 'note-st ok'; st.textContent = 'Salvo na planilha ✓'; }
+  });
   ta.addEventListener('blur', () => { clearTimeout(t); const cur = (store.get(k) || {}).n || ''; if (cur !== ta.value) store.put(k, {n: ta.value.slice(0, 1000)}); });
   document.addEventListener('keydown', escClose);
 }
@@ -1112,11 +1186,37 @@ function attachZoom(f){ if (!svgEl) return; const b = svgEl.getBoundingClientRec
 document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details[data-open]')) LS.set('fe26.open.' + d.dataset.open, d.open); }, true);
 
 /* ---------- boot ---------- */
-go(ui.tab in RENDER ? ui.tab : 'roteiro');
-store.connect();
-// warm the map files while the connection is good, without blocking the first screen
-const idle = window.requestIdleCallback || (f => setTimeout(f, 2500));
-idle(() => { loadMap().catch(() => {}); const im = new Image(); im.src = 'mapa.webp'; });
+function start(){
+  $('#gate').hidden = true;
+  $('#who').textContent = '· ' + USER;
+  setPerson(); store.init();
+  go(ui.tab in RENDER ? ui.tab : 'roteiro');
+  store.connect();
+  // warm the map files while the connection is good, without blocking the first screen
+  const idle = window.requestIdleCallback || (f => setTimeout(f, 2500));
+  idle(() => { loadMap().catch(() => {}); const im = new Image(); im.src = 'mapa.webp'; });
+}
+function showGate(){
+  $('#gate').hidden = false;
+  const f = $('#gate-f'), err = $('#g-err'), btn = $('#g-go');
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const nome = USERS.find(n => fold(n) === fold($('#g-n').value).trim());
+    const code = $('#g-c').value.trim();
+    if (!nome) { err.textContent = 'Nome não encontrado. Confira como está escrito.'; return; }
+    if (!code) { err.textContent = 'Digite o código da família.'; return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = 'Entrando…';
+    USER = nome; KEY = code;
+    try {
+      const res = await apiGet('hello');
+      if (res && res.ok) { USER = res.nome || nome; LS.set('fe26.user', USER); LS.set('fe26.key', KEY); start(); return; }
+      err.textContent = res && res.erro === 'codigo' ? 'Código incorreto.' : 'Não deu certo. Tente de novo.';
+    } catch (x) { err.textContent = 'Sem conexão com a planilha. Confira a internet e tente de novo.'; }
+    USER = KEY = null; btn.disabled = false; btn.textContent = 'Entrar';
+  });
+  setTimeout(() => $('#g-n').focus(), 50);
+}
+if (USER && KEY) start(); else showGate();
 })();
 </script>
 
