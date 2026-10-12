@@ -1413,7 +1413,38 @@ function route(a, b){
 }
 
 let vb = null, svgEl = null;
-function setVB(){ if (svgEl && vb) { svgEl.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); const r = vb.w / 70; $$('.pinc', svgEl).forEach(c => c.setAttribute('r', Math.max(4, Math.min(40, r)))); } }
+function setVB(){ if (svgEl && vb) { svgEl.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); const r = vb.w / 70; $$('.pinc', svgEl).forEach(c => c.setAttribute('r', Math.max(4, Math.min(40, r)))); tilesSoon(); } }
+/* planta em alta resolução: ao aproximar, carrega só os pedaços visíveis da planta original (até 8x mais nítida).
+   Sem internet, fica a imagem base. Coordenadas: unidade do mapa = px da imagem × 32; y desloca 11000 + 150 px. */
+const TILE_URL = 'https://storage.googleapis.com/zapt-maps/-oucipac8yomf5_0d7lq-floor0/0aeee848-a321-4fdb-bace-95382f6ad6fa-tiles';
+let tilesT = 0, tilesZ = 0;
+function tilesSoon(){ clearTimeout(tilesT); tilesT = setTimeout(drawTiles, 140); }
+function drawTiles(){
+  const g = svgEl && $('#gtiles', svgEl); if (!g || !vb || !MAP) return;
+  const box = svgEl.getBoundingClientRect(); if (!box.width) return;
+  const unitsPerPx = vb.w * 32 / box.width, dpr = Math.min(3, window.devicePixelRatio || 1);
+  const zf = Math.log2(1024 * dpr / unitsPerPx);
+  if (zf <= 5.3) { if (tilesZ) { g.innerHTML = ''; tilesZ = 0; } return; }
+  const z = Math.min(8, Math.max(6, Math.ceil(zf))), upp = 1024 / Math.pow(2, z), span = 256 * upp, sz = span / 32;
+  const x0 = Math.max(0, vb.x), y0 = Math.max(0, vb.y), x1 = Math.min(MAP.w, vb.x + vb.w), y1 = Math.min(MAP.imgH, vb.y + vb.h);
+  if (x1 <= x0 || y1 <= y0) return;
+  const tx0 = Math.floor(x0 * 32 / span), tx1 = Math.floor(x1 * 32 / span);
+  const ty0 = Math.floor(((y0 + 150) * 32 + 11000) / span), ty1 = Math.floor(((y1 + 150) * 32 + 11000) / span);
+  if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 140) return;
+  if (z !== tilesZ) { g.innerHTML = ''; tilesZ = z; }
+  const want = new Set();
+  for (let tx = tx0; tx <= tx1; tx++) for (let ty = ty0; ty <= ty1; ty++) {
+    const id = `t${z}_${tx}_${ty}`; want.add(id);
+    if (g.querySelector('#' + id)) continue;
+    const im = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    im.id = id; im.setAttribute('class', 'mapimg');
+    im.setAttribute('x', tx * sz); im.setAttribute('y', (ty * span - 11000) / 32 - 150);
+    im.setAttribute('width', sz + 0.3); im.setAttribute('height', sz + 0.3);
+    im.setAttribute('href', `${TILE_URL}/${z}/${tx}/${ty}.png`);
+    g.appendChild(im);
+  }
+  Array.from(g.children).forEach(c => { if (!want.has(c.id)) c.remove(); });
+}
 function fitBox(x0, y0, x1, y1, pad){
   const box = svgEl.getBoundingClientRect(); const asp = box.height / Math.max(1, box.width);
   pad = pad == null ? 60 : pad; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
@@ -1444,11 +1475,13 @@ function buildSvg(){
   });
   box.innerHTML = `<svg id="msvg" viewBox="0 0 ${M.w} ${M.h}" preserveAspectRatio="xMidYMid meet" aria-label="Planta da feira">
     <rect x="0" y="0" width="${M.w}" height="${M.h}" fill="var(--card)"/>
+    <defs><clipPath id="mclip"><rect x="0" y="0" width="${M.w}" height="${M.imgH}"/></clipPath></defs>
     <image class="mapimg" href="mapa.webp" x="0" y="0" width="${M.w}" height="${M.imgH}"/>
+    <g id="gtiles" clip-path="url(#mclip)"></g>
     <g id="gpoly">${polys}</g><g>${labels}</g><polyline id="route" points=""/><g id="gpins"></g></svg>
     <div class="ctl"><button class="btn icon" data-act="zin" aria-label="Aproximar">+</button><button class="btn icon" data-act="zout" aria-label="Afastar">−</button><button class="btn icon" data-act="zfit" aria-label="Ver tudo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
     <div class="mapinfo" id="minfo" hidden></div>`;
-  svgEl = $('#msvg');
+  svgEl = $('#msvg'); tilesZ = 0;
   sizeMapBox();
   if (window.innerWidth < 700) { const c = [1950, 480]; fitBox(c[0] - 450, c[1] - 200, c[0] + 450, c[1] + 200, 0); } else fitAll();
   attachPanZoom(svgEl);
@@ -1508,7 +1541,7 @@ function showInfo(sp){
 function attachPanZoom(svg){
   const pts = new Map(); let start = null, moved = false;
   const toSvg = (cx, cy) => { const r = svg.getBoundingClientRect(); return [vb.x + (cx - r.left) / r.width * vb.w, vb.y + (cy - r.top) / r.height * vb.h]; };
-  const zoomAt = (f, cx, cy) => { const [sx, sy] = toSvg(cx, cy); const nw = Math.min(MAP.w * 1.4, Math.max(120, vb.w * f)); const k = nw / vb.w; vb = {x: sx - (sx - vb.x) * k, y: sy - (sy - vb.y) * k, w: nw, h: vb.h * k}; setVB(); };
+  const zoomAt = (f, cx, cy) => { const [sx, sy] = toSvg(cx, cy); const nw = Math.min(MAP.w * 1.4, Math.max(60, vb.w * f)); const k = nw / vb.w; vb = {x: sx - (sx - vb.x) * k, y: sy - (sy - vb.y) * k, w: nw, h: vb.h * k}; setVB(); };
   svg.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.deltaY > 0 ? 1.18 : 1 / 1.18, e.clientX, e.clientY); }, {passive:false});
   svg.addEventListener('pointerdown', e => { svg.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = false; start = {vb: Object.assign({}, vb), p: Array.from(pts.values()).map(p => p.slice())}; });
   svg.addEventListener('pointermove', e => {
@@ -1522,7 +1555,7 @@ function attachPanZoom(svg){
       moved = true;
       const d0 = Math.hypot(start.p[0][0] - start.p[1][0], start.p[0][1] - start.p[1][1]), d1 = Math.hypot(cur[0][0] - cur[1][0], cur[0][1] - cur[1][1]);
       const mx = (start.p[0][0] + start.p[1][0]) / 2, my = (start.p[0][1] + start.p[1][1]) / 2, nx = (cur[0][0] + cur[1][0]) / 2, ny = (cur[0][1] + cur[1][1]) / 2;
-      const k = Math.min(MAP.w * 1.4 / start.vb.w, Math.max(120 / start.vb.w, d0 / Math.max(1, d1)));
+      const k = Math.min(MAP.w * 1.4 / start.vb.w, Math.max(60 / start.vb.w, d0 / Math.max(1, d1)));
       const sx = start.vb.x + (mx - r.left) / r.width * start.vb.w, sy = start.vb.y + (my - r.top) / r.height * start.vb.h;
       const w = start.vb.w * k, h = start.vb.h * k;
       vb = {x: sx - (nx - r.left) / r.width * w, y: sy - (ny - r.top) / r.height * h, w, h}; setVB();
@@ -1618,7 +1651,7 @@ document.addEventListener('click', e => {
     case 'clearsearch': Object.assign(srch, {day:'', per:'', int:'', st:'', stage:'', seg:'', pT:1, pS:1}); renderBuscar(); break;
   }
 });
-function attachZoom(f){ if (!svgEl) return; const b = svgEl.getBoundingClientRect(); const cx = vb.x + vb.w / 2, cy = vb.y + vb.h / 2; const nw = Math.min(MAP.w * 1.4, Math.max(120, vb.w * f)); const k = nw / vb.w; vb = {x: cx - vb.w * k / 2, y: cy - vb.h * k / 2, w: nw, h: vb.h * k}; setVB(); }
+function attachZoom(f){ if (!svgEl) return; const b = svgEl.getBoundingClientRect(); const cx = vb.x + vb.w / 2, cy = vb.y + vb.h / 2; const nw = Math.min(MAP.w * 1.4, Math.max(60, vb.w * f)); const k = nw / vb.w; vb = {x: cx - vb.w * k / 2, y: cy - vb.h * k / 2, w: nw, h: vb.h * k}; setVB(); }
 document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details[data-open]')) LS.set('fe26.open.' + d.dataset.open, d.open); }, true);
 
 /* ---------- boot ---------- */
