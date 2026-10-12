@@ -22,7 +22,7 @@
   --food:#c2410c;--mkt:#0369a1;--des:#6d28d9;
   --ok:#15803d;--ok-bg:#e6f6ea;
   --again:#b45309;--again-bg:#fdf1d8;
-  --star:#f2a50c;--route:#6d28d9;--from:#15803d;--to:#dc2626;
+  --star:#f2a50c;--route:#6d28d9;--from:#15803d;--to:#dc2626;--danger:#dc2626;--danger-fg:#ffffff;
   --overlay:rgb(17 17 17 / .42);
   --shadow:0 1px 2px rgb(17 17 17 / .06),0 8px 24px -8px rgb(17 17 17 / .14);
   --shadow-lg:0 2px 6px rgb(17 17 17 / .06),0 18px 40px -12px rgb(17 17 17 / .22);
@@ -41,7 +41,7 @@
   --food:#fb923c;--mkt:#38bdf8;--des:#a78bfa;
   --ok:#4ade80;--ok-bg:#15291b;
   --again:#fbbf24;--again-bg:#2e2410;
-  --star:#fbbf24;--route:#a78bfa;--from:#4ade80;--to:#f87171;
+  --star:#fbbf24;--route:#a78bfa;--from:#4ade80;--to:#f87171;--danger:#f87171;--danger-fg:#111111;
   --overlay:rgb(0 0 0 / .6);
   --shadow:0 1px 2px rgb(0 0 0 / .4),0 8px 24px -8px rgb(0 0 0 / .6);
   --shadow-lg:0 2px 6px rgb(0 0 0 / .4),0 18px 40px -12px rgb(0 0 0 / .8);
@@ -56,7 +56,7 @@
   --food:#fb923c;--mkt:#38bdf8;--des:#a78bfa;
   --ok:#4ade80;--ok-bg:#15291b;
   --again:#fbbf24;--again-bg:#2e2410;
-  --star:#fbbf24;--route:#a78bfa;--from:#4ade80;--to:#f87171;
+  --star:#fbbf24;--route:#a78bfa;--from:#4ade80;--to:#f87171;--danger:#f87171;--danger-fg:#111111;
   --overlay:rgb(0 0 0 / .6);
   --shadow:0 1px 2px rgb(0 0 0 / .4),0 8px 24px -8px rgb(0 0 0 / .6);
   --shadow-lg:0 2px 6px rgb(0 0 0 / .4),0 18px 40px -12px rgb(0 0 0 / .8);
@@ -309,6 +309,18 @@ details.alts > summary .chev,details.filters > summary .chev{margin-left:auto}
 .note-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .note-st{font-size:13px;color:var(--muted-fg)}
 .note-st.ok{color:var(--ok)}
+/* destructive: clear this item's records */
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);background:transparent}
+.btn.danger:hover{background:color-mix(in srgb,var(--danger) 10%,transparent)}
+.btn.danger.fill{background:var(--danger);color:var(--danger-fg);border-color:var(--danger)}
+.btn.danger.fill:hover{opacity:.9;background:var(--danger)}
+.clear-row{display:flex;justify-content:flex-start}
+.clear-row[hidden]{display:none}
+.cscrim{position:fixed;inset:0;background:var(--overlay);z-index:70}
+.confirm{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:71;width:min(400px,calc(100% - 40px));background:var(--card);border-radius:24px;padding:24px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px}
+.confirm h3{font-size:20px;line-height:1.25;font-weight:600}
+.confirm p{font-size:15px;color:var(--muted-fg)}
+.confirm .acts2{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -530,6 +542,7 @@ const SV = (d, w) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const I_LOC = SV('<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.2"/>');
 const I_USER = SV('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>');
 const I_TAG = SV('<path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="9" r="1.3"/>');
+const I_TRASH = SV('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/>');
 const I_INFO = SV('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>');
 const I_FMT = SV('<rect x="3.5" y="5" width="17" height="12" rx="2"/><path d="M8 20h8"/>');
 const I_HASH = SV('<path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/>');
@@ -864,10 +877,11 @@ function openSheet(k){
   const stars = [1, 2, 3, 4, 5].map(i => `<button type="button" data-star="${i}" class="${(r.s || 0) >= i ? 'on' : ''}" aria-label="${i} estrela${i > 1 ? 's' : ''}" aria-pressed="${(r.s || 0) === i}">${I_STAR}</button>`).join('');
   $('#sheet-root').innerHTML = `<div class="scrim" data-act="close"></div>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Detalhes" data-k="${k}"><div class="sheet-top"><button class="ib" data-act="close" aria-label="Fechar">${SV('<path d="M6 6l12 12M18 6 6 18"/>', 2)}</button></div><div class="stack">${body}<div class="divider"></div>
-      <div class="field"><span class="label">Sua avaliação</span><div class="row"><div class="stars" id="stars">${stars}</div>${r.s ? '<button class="btn sm ghost" data-star="0">Limpar</button>' : ''}</div></div>
+      <div class="field"><span class="label">Sua avaliação</span><div class="stars" id="stars">${stars}</div></div>
       <div class="field"><label class="label" for="note">Comentário</label><textarea class="input" id="note" maxlength="1000" placeholder="O que valeu, contatos, preços, ideias…">${esc(r.n || '')}</textarea>
         <div class="note-row"><span class="count" id="note-c">${(r.n || '').length}/1000</span><button class="btn sm pri" type="button" id="note-save">Salvar comentário</button></div><span class="note-st" id="note-st" role="status"></span></div>
       <div class="row">${spOf(it) >= 0 ? `<button class="btn" data-act="map">${I_PIN}Ver no mapa</button>` : ''}${it.kind === 'talk' ? `<button class="btn" data-act="near">${I_NEAR}Por perto</button>` : ''}</div>
+      <div class="clear-row" id="clear-row" ${store.empty(r) ? 'hidden' : ''}><button class="btn sm danger" type="button" data-act="askclear">${I_TRASH}Limpar</button></div>
     </div></div>`;
   const ta = $('#note'); let t;
   const st = $('#note-st');
@@ -884,7 +898,24 @@ function openSheet(k){
   ta.addEventListener('blur', () => { clearTimeout(t); const cur = (store.get(k) || {}).n || ''; if (cur !== ta.value) store.put(k, {n: ta.value.slice(0, 1000)}); });
   document.addEventListener('keydown', escClose);
 }
-function escClose(e){ if (e.key === 'Escape') closeSheet(); }
+function escClose(e){ if (e.key !== 'Escape') return; if ($('.confirm')) closeConfirm(); else closeSheet(); }
+/* confirmation before clearing an item's check-in, rating and comment */
+function clearWhat(r){
+  const parts = [];
+  if (r.w || r.v || r.r) parts.push('o check-in'); if (r.s) parts.push('a avaliação'); if (r.n) parts.push('o comentário');
+  return parts.length > 1 ? parts.slice(0, -1).join(', ') + ' e ' + parts[parts.length - 1] : parts[0] || 'os registros';
+}
+function askClear(k){
+  const r = store.get(k) || {}; const it = BYK.get(k);
+  const box = document.createElement('div');
+  box.innerHTML = `<div class="cscrim" data-act="cancelclear"></div><div class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="cf-t" aria-describedby="cf-d">
+    <h3 id="cf-t">Limpar ${it && it.kind === 'stand' ? 'este estande' : 'esta palestra'}?</h3>
+    <p id="cf-d">Tem certeza que deseja limpar ${clearWhat(r)}? Essa ação não poderá ser desfeita.</p>
+    <div class="acts2"><button class="btn" type="button" data-act="cancelclear">Cancelar</button><button class="btn danger fill" type="button" data-act="doclear" data-ck="${esc(k)}">Limpar</button></div></div>`;
+  box.id = 'confirm-root'; document.body.appendChild(box);
+  setTimeout(() => { const b = $('#confirm-root [data-act="cancelclear"].btn'); if (b) b.focus(); }, 30);
+}
+function closeConfirm(){ const c = $('#confirm-root'); if (c) c.remove(); }
 function closeSheet(){
   const ta = $('#note'); if (ta && sheetK) { const cur = (store.get(sheetK) || {}).n || ''; if (cur !== ta.value) store.put(sheetK, {n: ta.value.slice(0, 1000)}); }
   $('#sheet-root').innerHTML = ''; sheetK = null; document.removeEventListener('keydown', escClose);
@@ -1136,7 +1167,7 @@ function refreshCard(k){
       if (sm) sm.remove();
       if (r.s && acts) { const x = document.createElement('span'); x.className = 'stars-mini'; x.setAttribute('aria-label', r.s + ' estrelas'); x.textContent = '★'.repeat(r.s); acts.insertBefore(x, $('.grow', acts)); }
     }
-    if (el.classList.contains('sheet')) { const s = r.s || 0; $$('#stars button', el).forEach(b => b.classList.toggle('on', +b.dataset.star <= s)); }
+    if (el.classList.contains('sheet')) { const s = r.s || 0; $$('#stars button', el).forEach(b => b.classList.toggle('on', +b.dataset.star <= s)); const cr = $('#clear-row', el); if (cr) cr.hidden = store.empty(r); }
   });
   $$('details.blk.est').forEach(dt => { const c = $('.count', dt); if (!c) return; const ks = $$('.mini', dt).map(m => m.dataset.k); c.textContent = ks.filter(x => { const r = store.get(x); return r && r.v; }).length + '/' + ks.length; });
 }
@@ -1163,6 +1194,9 @@ document.addEventListener('click', e => {
     case 'theme': { const t = isDark() ? 'light' : 'dark'; applyTheme(t); LS.set('fe26.theme', t); ab.outerHTML = themeBtn(); break; }
     case 'open': if (k) openSheet(k); break;
     case 'close': closeSheet(); break;
+    case 'askclear': if (sheetK) askClear(sheetK); break;
+    case 'cancelclear': closeConfirm(); break;
+    case 'doclear': { const ck = ab.dataset.ck; closeConfirm(); store.put(ck, {w:0, v:0, r:0, s:0, n:''}); if (sheetK === ck) openSheet(ck); toast('Registros limpos'); break; }
     case 'watch': store.put(k, {w: r.w ? 0 : 1}); toast(r.w ? 'Desmarcada' : 'Marcada como assistida'); break;
     case 'visit': store.put(k, {v: r.v ? 0 : 1}); toast(r.v ? 'Desmarcado' : 'Marcado como visitado'); break;
     case 'again': store.put(k, {r: r.r ? 0 : 1}); toast(r.r ? 'Removido de "visitar de novo"' : 'Marcado para visitar de novo'); break;
