@@ -328,7 +328,6 @@ details.alts > summary .chev,details.filters > summary .chev{margin-left:auto}
   <div class="field"><label class="label" for="g-c">Código da família</label><input class="input" id="g-c" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"></div>
   <p class="gate-err" id="g-err" role="alert"></p>
   <button class="btn pri" type="submit" id="g-go">Entrar</button>
-  <p class="small muted">Este aparelho fica registrado no seu nome. Tudo o que você marcar e comentar vai para a sua parte da planilha.</p>
 </form></div>
 <div id="sheet-root"></div>
 <div id="toast-root"></div>
@@ -458,15 +457,15 @@ const store = {
         if (this.pend.has(x.k) && l && (l.ts || 0) >= x.ts) return;
         if (!l || x.ts > (l.ts || 0)) { this.recs[x.k] = {k: x.k, kind: it.kind, w: talk ? x.f : 0, v: talk ? 0 : x.f, r: x.r, s: x.s, n: x.n, ts: x.ts}; changed = true; }
       });
-      // o que existe só neste aparelho também sobe para a planilha
-      Object.keys(this.recs).forEach(k => { if (!seen.has(k) && !this.empty(this.recs[k])) this.pend.add(k); });
+      // a planilha é a referência: o que não está nela e não está esperando envio foi apagado lá
+      Object.keys(this.recs).forEach(k => { if (!seen.has(k) && !this.pend.has(k)) { delete this.recs[k]; changed = true; } });
       this.state = 'ok'; this.save(); if (changed) this.emit(null);
     }).catch(() => { this.state = 'off'; }).then(() => { this.status(); return this.flush(); });
   },
   status(){
     const el = $('#sync'); if (!el) return; const n = this.pend.size;
     const txt = n ? (this.state === 'off' ? 'Sem internet · ' : '') + (n === 1 ? '1 item para enviar' : n + ' itens para enviar')
-      : this.state === 'ok' ? 'Salvo na planilha' : this.state === 'err' ? 'Erro na planilha' : this.state === 'off' ? 'Sem internet' : 'Conectando…';
+      : this.state === 'ok' ? 'Salvo' : this.state === 'err' ? 'Erro ao salvar' : this.state === 'off' ? 'Sem internet' : 'Conectando…';
     el.dataset.s = n ? (this.state === 'off' || this.state === 'err' ? 'off' : 'pend') : this.state === 'ok' ? 'ok' : this.state === 'wait' ? 'local' : 'off';
     el.lastChild.textContent = txt;
   },
@@ -868,8 +867,8 @@ function openSheet(k){
     st.className = 'note-st'; st.textContent = 'Salvando…';
     await store.flush();
     if (sheetK !== k) return;
-    if (store.pend.has(k)) st.textContent = 'Salvo no aparelho. Vai para a planilha quando a internet voltar.';
-    else { st.className = 'note-st ok'; st.textContent = 'Salvo na planilha ✓'; }
+    if (store.pend.has(k)) st.textContent = 'Salvo neste aparelho. Envio automático quando a internet voltar.';
+    else { st.className = 'note-st ok'; st.textContent = 'Salvo ✓'; }
   });
   ta.addEventListener('blur', () => { clearTimeout(t); const cur = (store.get(k) || {}).n || ''; if (cur !== ta.value) store.put(k, {n: ta.value.slice(0, 1000)}); });
   document.addEventListener('keydown', escClose);
@@ -1200,7 +1199,7 @@ function showGate(){
       const res = await apiGet('hello');
       if (res && res.ok) { USER = res.nome || nome; LS.set('fe26.user', USER); LS.set('fe26.key', KEY); start(); return; }
       err.textContent = res && res.erro === 'codigo' ? 'Código incorreto.' : 'Não deu certo. Tente de novo.';
-    } catch (x) { err.textContent = 'Sem conexão com a planilha. Confira a internet e tente de novo.'; }
+    } catch (x) { err.textContent = 'Sem conexão. Confira a internet e tente de novo.'; }
     USER = KEY = null; btn.disabled = false; btn.textContent = 'Entrar';
   });
   setTimeout(() => $('#g-n').focus(), 50);
