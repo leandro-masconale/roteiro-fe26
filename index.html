@@ -653,7 +653,6 @@ const LS = {
 const PAGE = 20;
 /* ---------- planilha (Google Apps Script) ---------- */
 const API = 'https://script.google.com/macros/s/AKfycbyDHrLX_CYe5zXsMOEIuOdp1bTRc6r2Z3AuWFfDEDg_iJjCibVQsf0tlBr2B5vViBD-/exec';
-const USERS = ['Leandro', 'Maria', 'Romana'];
 if (/[?&]sair\b/.test(location.search)) { try { localStorage.removeItem('fe26.user'); localStorage.removeItem('fe26.key'); } catch (e) {} history.replaceState(null, '', location.pathname); }
 let USER = LS.get('fe26.user', null), KEY = LS.get('fe26.key', null);
 const apiGet = a => fetch(`${API}?a=${a}&u=${encodeURIComponent(USER)}&key=${encodeURIComponent(KEY)}`, {cache:'no-store'}).then(r => r.json());
@@ -1749,16 +1748,17 @@ function showGate(){
   const f = $('#gate-f'), err = $('#g-err'), btn = $('#g-go');
   f.addEventListener('submit', async e => {
     e.preventDefault();
-    const nome = USERS.find(n => fold(n) === fold($('#g-n').value).trim());
+    // nome livre: 2 a 20 letras; a planilha cria a aba da pessoa no primeiro acesso
+    const nome = $('#g-n').value.trim().replace(/\s+/g, ' ');
     const code = $('#g-c').value.trim();
-    if (!nome) { err.textContent = 'Nome não encontrado. Confira como está escrito.'; return; }
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,20}$/.test(nome)) { err.textContent = 'Use só letras no nome (de 2 a 20).'; return; }
     if (!code) { err.textContent = 'Digite o código da família.'; return; }
     err.textContent = ''; btn.disabled = true; btn.textContent = 'Entrando…';
     USER = nome; KEY = code;
     try {
       const res = await apiGet('hello');
       if (res && res.ok) { USER = res.nome || nome; LS.set('fe26.user', USER); LS.set('fe26.key', KEY); start(); return; }
-      err.textContent = res && res.erro === 'codigo' ? 'Código incorreto.' : 'Não deu certo. Tente de novo.';
+      err.textContent = res && res.erro === 'codigo' ? 'Código incorreto.' : res && res.erro === 'nome' ? 'Esse nome não pode ser usado. Tente outro.' : 'Não deu certo. Tente de novo.';
     } catch (x) { err.textContent = 'Sem conexão. Confira a internet e tente de novo.'; }
     USER = KEY = null; btn.disabled = false; btn.textContent = 'Entrar';
   });
